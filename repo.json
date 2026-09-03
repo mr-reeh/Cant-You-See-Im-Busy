@@ -1,0 +1,20 @@
+[
+  {
+    "Author": "mr-reeh",
+    "Name": "Can't You See I'm Busy",
+    "InternalName": "CantYouSeeImBusy",
+    "AssemblyVersion": "0.1.0.0",
+    "Punchline": "Plays an emote when you open the map or a crafting/gathering/fishing log.",
+    "Description": "Automatically triggers /navigate when you open the world or zone map, and /study when you open the Crafting, Gathering, or Fishing Log. /navigate and /study can interrupt each other; the map won't re-trigger itself for 13 seconds.",
+    "RepoUrl": "https://github.com/mr-reeh/Cant-You-See-Im-Busy",
+    "Tags": ["emote", "map", "crafting", "gathering", "fishing", "qol"],
+    "DalamudApiLevel": 15,
+    "LoadRequiredState": 1,
+    "LoadSync": false,
+    "CanUnloadAsync": true,
+    "AcceptsFeedback": false,
+    "DownloadLinkInstall": "https://github.com/mr-reeh/Cant-You-See-Im-Busy/releases/latest/download/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/mr-reeh/Cant-You-See-Im-Busy/releases/latest/download/latest.zip",
+    "DownloadLinkTesting": "https://github.com/mr-reeh/Cant-You-See-Im-Busy/releases/latest/download/latest.zip"
+  }
+]

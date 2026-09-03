@@ -1,0 +1,10 @@
+C:\Users\Hayden\Desktop\My Plugins\CantYouSeeImBusy\CantYouSeeImBusy\bin\Debug\CantYouSeeImBusy.deps.json
+C:\Users\Hayden\Desktop\My Plugins\CantYouSeeImBusy\CantYouSeeImBusy\bin\Debug\CantYouSeeImBusy.dll
+C:\Users\Hayden\Desktop\My Plugins\CantYouSeeImBusy\CantYouSeeImBusy\bin\Debug\ECommons.dll
+C:\Users\Hayden\Desktop\My Plugins\CantYouSeeImBusy\CantYouSeeImBusy\obj\Debug\CantYouSeeImBusy.csproj.AssemblyReference.cache
+C:\Users\Hayden\Desktop\My Plugins\CantYouSeeImBusy\CantYouSeeImBusy\obj\Debug\CantYouSeeImBusy.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Hayden\Desktop\My Plugins\CantYouSeeImBusy\CantYouSeeImBusy\obj\Debug\CantYouSeeImBusy.AssemblyInfoInputs.cache
+C:\Users\Hayden\Desktop\My Plugins\CantYouSeeImBusy\CantYouSeeImBusy\obj\Debug\CantYouSeeImBusy.AssemblyInfo.cs
+C:\Users\Hayden\Desktop\My Plugins\CantYouSeeImBusy\CantYouSeeImBusy\obj\Debug\CantYouSeeImBusy.csproj.CoreCompileInputs.cache
+C:\Users\Hayden\Desktop\My Plugins\CantYouSeeImBusy\CantYouSeeImBusy\obj\Debug\CantYouS.657893C3.Up2Date
+C:\Users\Hayden\Desktop\My Plugins\CantYouSeeImBusy\CantYouSeeImBusy\obj\Debug\CantYouSeeImBusy.dll

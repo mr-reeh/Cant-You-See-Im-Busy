@@ -1,0 +1,41 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "CantYouSeeImBusy/0.1.0.0": {
+        "dependencies": {
+          "ECommons": "3.2.1.18"
+        },
+        "runtime": {
+          "CantYouSeeImBusy.dll": {}
+        }
+      },
+      "ECommons/3.2.1.18": {
+        "runtime": {
+          "lib/net10.0-windows7.0/ECommons.dll": {
+            "assemblyVersion": "3.2.1.18",
+            "fileVersion": "3.2.1.18"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "CantYouSeeImBusy/0.1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "ECommons/3.2.1.18": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-7yudYdKsg6TMki8+vekCbnOf4JdG/JFAcMFzMC77uv8E9WF87Cln6TL+OvFYUbqatfyFiMwXwJOEs/P7LcCjPQ==",
+      "path": "ecommons/3.2.1.18",
+      "hashPath": "ecommons.3.2.1.18.nupkg.sha512"
+    }
+  }
+}

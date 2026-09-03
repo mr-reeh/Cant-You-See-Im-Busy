@@ -1,0 +1,40 @@
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+
+  <PropertyGroup>
+    <!-- If `dotnet restore` complains about this SDK version, check
+         https://www.nuget.org/packages/Dalamud.NET.Sdk for the current
+         release and bump the version above to match. -->
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>CantYouSeeImBusy</RootNamespace>
+    <AssemblyName>CantYouSeeImBusy</AssemblyName>
+    <Version>0.1.0.0</Version>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- Plugin manifest, generated straight from these properties by
+       Dalamud.NET.Sdk v14+ (no separate .json file needed). -->
+  <PropertyGroup>
+    <Author>mr-reeh</Author>
+    <Name>Can't You See I'm Busy</Name>
+    <InternalName>CantYouSeeImBusy</InternalName>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <Punchline>Plays an emote when you open the map or a crafting/gathering/fishing log.</Punchline>
+    <Description>Automatically triggers /navigate when you open the world or zone map, and /study when you open the Crafting, Gathering, or Fishing Log. /navigate and /study can interrupt each other; the map won't re-trigger itself for 13 seconds.</Description>
+    <RepoUrl>https://github.com/mr-reeh/Cant-You-See-Im-Busy</RepoUrl>
+    <Tags>emote;map;crafting;gathering;fishing;qol</Tags>
+    <DalamudApiLevel>15</DalamudApiLevel>
+    <LoadRequiredState>1</LoadRequiredState>
+    <LoadSync>false</LoadSync>
+    <CanUnloadAsync>true</CanUnloadAsync>
+    <AcceptsFeedback>false</AcceptsFeedback>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Floating version so `dotnet restore` always grabs current ECommons.
+         Pin this to a fixed version (e.g. Version="3.0.1.2") once you've
+         settled on one, for reproducible builds. -->
+    <PackageReference Include="ECommons" Version="*" />
+  </ItemGroup>
+
+</Project>
