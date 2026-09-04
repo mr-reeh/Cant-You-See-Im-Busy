@@ -1,103 +1,124 @@
 # Can't You See I'm Busy
 
-Plays an emote automatically when you open certain game windows:
+A Dalamud plugin for FFXIV that plays a little animation for you when
+you open the map or check a crafting/gathering/fishing log — because
+apparently you're far too busy to just stand there.
 
-| Window | Addon hooked | Emote | Config toggle | Self-lock |
-|---|---|---|---|---|
-| Map (world/zone) | `AreaMap` | `/navigate` | Map | 13s (hardcoded) |
-| Crafting Log | `RecipeNote` | `/study` | Crafting Log | None |
-| Gathering Log | `GatheringNote` | `/study` | Gathering Log | None |
-| Fishing Log | `FishingNote` | `/study` | Fishing Log | None |
+## What it does
 
-All four addon names are confirmed working live. All hooks use
-`AddonEvent.PostShow` — confirmed (via diagnostic logging) to be what
-fires when the player actually opens the window, as opposed to
-`PostSetup`/`PostOpen`, which only fire once per session when the addon
-is first constructed.
+- Opening the world map or zone map plays **/navigate**.
+- Opening the Crafting Log, Gathering Log, or Fishing Log plays
+  **/study**.
+- The two never step on each other weirdly: opening a log will always
+  interrupt an in-progress `/navigate`, and vice versa.
+- Quickly closing and reopening the map won't restart the animation
+  from scratch — it's locked out for 13 seconds so it doesn't stutter.
+- Everything is toggleable individually, plus a master on/off switch.
 
-## Installing (for users)
+## Installing
 
-1. In-game, run `/xlsettings` → Experimental → Custom Plugin Repositories.
-2. Paste in `https://raw.githubusercontent.com/mr-reeh/Cant-You-See-Im-Busy/main/repo.json`, click the `+`, save.
-3. Open `/xlplugins`, search for "Can't You See I'm Busy", install.
+Can't You See I'm Busy isn't in the official Dalamud plugin list, so
+it's installed via a custom repository:
 
-## Interrupt behavior
+1. In-game, open `/xlsettings` → **Experimental** → **Custom Plugin
+   Repositories**.
+2. Paste in:
+   ```
+   https://raw.githubusercontent.com/mr-reeh/Cant-You-See-Im-Busy/main/repo.json
+   ```
+3. Click the `+`, then **Save**.
+4. Open `/xlplugins` and search for "Can't You See I'm Busy" to
+   install it.
 
-Only the map self-locks against rapid re-triggering, for a fixed 13
-seconds (`MapLockSeconds` in `Plugin.cs` — hardcoded intentionally, not
-user-configurable). This exists because `ConditionFlag.Emoting` does
-NOT reflect `/navigate` or `/study` (confirmed False while `/navigate`
-was visibly still playing), so there's no reliable game-exposed flag to
-check — the lock is our own approximation of the animation's length.
+## Settings
 
-The three log windows have no lock at all, so opening one always fires
-`/study` immediately — including interrupting an in-progress
-`/navigate`. And since the map's lock only guards against itself,
-opening the map right after a log's `/study` still fires `/navigate`
-and interrupts that too. In short: `/navigate` and `/study` can always
-interrupt each other; only the map can't interrupt itself within 13s.
+Open the settings window in-game with `/cysib`, or via the gear icon
+next to the plugin in the Plugin Installer. From there you can toggle:
 
-## If an addon hook stops firing (e.g. after a game patch)
+- The plugin as a whole
+- Each of the four windows individually (Map, Crafting Log, Gathering
+  Log, Fishing Log)
+- Motion-only mode, so the emote plays without a line in your chat log
+- Diagnostic logging, for troubleshooting if a future game patch
+  changes something (see below)
 
-Open the in-game config window (`/cysib`, or the gear icon in the
-Plugin Installer) and check **Diagnostic addon logging**. Then open the
-window in question and check `/xllog` for lines like:
+## Troubleshooting
 
-```
-[CYSIB diag] PostShow fired for addon 'SomeActualName'.
-```
+If one of the four stops triggering (most likely after a game patch
+changes an internal window name), turn on **Diagnostic addon logging**
+in the settings window, open the window that's not working, and check
+`/xllog` for a line starting with `[CYSIB diag]` — that'll show the
+window's current internal name so it can be fixed.
 
-Update the `trackedAddons` dictionary at the top of `Plugin.cs` with
-whatever name shows up there and rebuild.
+---
 
-## Making a release build
+## For developers
 
-`dotnet build -c Release` triggers DalamudPackager (bundled with
-Dalamud.NET.Sdk) automatically. Look in
-`CantYouSeeImBusy/bin/x64/Release/net10.0-windows/CantYouSeeImBusy/` for
-a generated `CantYouSeeImBusy.json` manifest and a `latest.zip` — that
-zip is the exact file to attach to the GitHub release.
+<details>
+<summary>Building, project layout, and release process</summary>
 
-## Building
+### Building
 
-1. Make sure `DALAMUD_HOME` is set (XIVLauncher users get this for free;
-   XIVLauncher.Core / manual setups need to point it at their Dalamud dev
-   folder, usually `%AppData%\XIVLauncher\addon\Hooks\dev`).
+1. Make sure `DALAMUD_HOME` is set (XIVLauncher users get this for
+   free; XIVLauncher.Core / manual setups need to point it at their
+   Dalamud dev folder, usually
+   `%AppData%\XIVLauncher\addon\Hooks\dev`).
 2. `dotnet restore`
 3. `dotnet build -c Debug`
 
 If `dotnet restore` errors on the SDK version in the `.csproj`'s first
 line (`Dalamud.NET.Sdk/15.0.0`), check
 https://www.nuget.org/packages/Dalamud.NET.Sdk for whatever's current
-and bump it — the SDK version needs to track your installed Dalamud's
-API level.
+and bump it to match your installed Dalamud's API level.
 
-## Loading it in-game for testing
+### Loading it in-game for testing
 
 1. In-game, run `/xlsettings` → Experimental → add the path to this
-   project's output folder (`...\CantYouSeeImBusy\bin\x64\Debug`) under
-   **Dev Plugin Locations**.
+   project's output folder (`...\CantYouSeeImBusy\bin\x64\Debug`)
+   under **Dev Plugin Locations**.
 2. Open the plugin installer (`/xlplugins`) → Dev Tools tab → find
    "Can't You See I'm Busy" and enable it.
 3. Rebuilding after a code change and reloading the plugin (or
    restarting the game) picks up the new DLL.
 
-## Commands
+### What's hooked, under the hood
 
-- `/cysib` — open the settings window. Also reachable from the gear
-  icon in the Plugin Installer.
+| Window | Addon | Emote | Self-lock |
+|---|---|---|---|
+| Map (world/zone) | `AreaMap` | `/navigate` | 13s (hardcoded, `MapLockSeconds` in `Plugin.cs`) |
+| Crafting Log | `RecipeNote` | `/study` | None |
+| Gathering Log | `GatheringNote` | `/study` | None |
+| Fishing Log | `FishingNote` | `/study` | None |
 
-## Settings window
+All four use `AddonEvent.PostShow`, confirmed via diagnostic logging
+to be what fires when the player actually opens the window (as
+opposed to `PostSetup`/`PostOpen`, which only fire once per session
+when the addon is first constructed).
 
-Toggles for: master enable, each of the four tracked windows
-individually, motion-only (skip the chat line), and diagnostic addon
-logging (see above). No lock-duration control by design — see
-"Interrupt behavior" above.
+The map's 13-second lock exists because `ConditionFlag.Emoting` does
+NOT reflect `/navigate` or `/study` — confirmed False while `/navigate`
+was visibly still playing — so there's no reliable game-exposed "still
+playing" flag to check. The lock is a hand-tuned approximation
+instead. The three log windows have no lock, which is what lets
+`/study` always interrupt an in-progress `/navigate`; since the map's
+lock only guards against itself, `/navigate` can likewise always
+interrupt `/study`.
 
-## Notes
+### Making a release build
+
+`dotnet build -c Release` triggers DalamudPackager (bundled with
+Dalamud.NET.Sdk) automatically. Look in
+`CantYouSeeImBusy/bin/x64/Release/net10.0-windows/CantYouSeeImBusy/`
+for a generated `CantYouSeeImBusy.json` manifest and a `latest.zip` —
+that zip is the exact file to attach to the GitHub release, named
+`latest.zip` so it matches the download URL already in `repo.json`.
+
+### Notes
 
 - Uses ECommons for `Chat.SendMessage` rather than a hand-rolled
-  `ProcessChatBox` signature. See `Plugin.cs` for where to swap that out
-  if you'd rather not take the dependency.
+  `ProcessChatBox` signature. See `Plugin.cs` for where to swap that
+  out if you'd rather not take the dependency.
 - Config persists via the standard `IPluginConfiguration` /
   `SavePluginConfig` flow.
+
+</details>
