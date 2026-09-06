@@ -10,6 +10,7 @@
     <Version>0.1.0.0</Version>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IsPackable>false</IsPackable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <!-- Plugin manifest, generated straight from these properties by
@@ -20,7 +21,7 @@
     <InternalName>CantYouSeeImBusy</InternalName>
     <AssemblyVersion>0.1.0.0</AssemblyVersion>
     <Punchline>Plays an emote when you open the map or a crafting/gathering/fishing log.</Punchline>
-    <Description>Automatically triggers /navigate when you open the world or zone map, and /study when you open the Crafting, Gathering, or Fishing Log. /navigate and /study can interrupt each other; the map won't re-trigger itself for 13 seconds.</Description>
+    <Description>Automatically triggers /navigate when you open the world or zone map, and /read when you open the Crafting, Gathering, or Fishing Log. /navigate and /read can interrupt each other, but neither restarts its own animation on a quick reopen.</Description>
     <RepoUrl>https://github.com/mr-reeh/Cant-You-See-Im-Busy</RepoUrl>
     <Tags>emote;map;crafting;gathering;fishing;qol</Tags>
     <DalamudApiLevel>15</DalamudApiLevel>

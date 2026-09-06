@@ -8,11 +8,11 @@ apparently you're far too busy to just stand there.
 
 - Opening the world map or zone map plays **/navigate**.
 - Opening the Crafting Log, Gathering Log, or Fishing Log plays
-  **/study**.
+  **/read**.
 - The two never step on each other weirdly: opening a log will always
-  interrupt an in-progress `/navigate`, and vice versa.
-- Quickly closing and reopening the map won't restart the animation
-  from scratch — it's locked out for 13 seconds so it doesn't stutter.
+  interrupt an in-progress `/navigate`, and vice versa — but neither
+  one restarts its own animation from scratch if you quickly close and
+  reopen the same window while it's still playing.
 - Everything is toggleable individually, plus a master on/off switch.
 
 ## Installing
@@ -45,10 +45,11 @@ next to the plugin in the Plugin Installer. From there you can toggle:
 ## Troubleshooting
 
 If one of the four stops triggering (most likely after a game patch
-changes an internal window name), turn on **Diagnostic addon logging**
-in the settings window, open the window that's not working, and check
-`/xllog` for a line starting with `[CYSIB diag]` — that'll show the
-window's current internal name so it can be fixed.
+changes an internal window name), or the interrupt/repeat behavior
+seems off, turn on **Diagnostic addon logging** in the settings
+window and check `/xllog` for lines starting with `[CYSIB diag]` —
+they show both the window's current internal name and the
+character's busy state at the moment it tried to trigger.
 
 ---
 
@@ -83,26 +84,36 @@ and bump it to match your installed Dalamud's API level.
 
 ### What's hooked, under the hood
 
-| Window | Addon | Emote | Self-lock |
-|---|---|---|---|
-| Map (world/zone) | `AreaMap` | `/navigate` | 13s (hardcoded, `MapLockSeconds` in `Plugin.cs`) |
-| Crafting Log | `RecipeNote` | `/study` | None |
-| Gathering Log | `GatheringNote` | `/study` | None |
-| Fishing Log | `FishingNote` | `/study` | None |
+| Window | Addon | Emote |
+|---|---|---|
+| Map (world/zone) | `AreaMap` | `/navigate` |
+| Crafting Log | `RecipeNote` | `/read` |
+| Gathering Log | `GatheringNote` | `/read` |
+| Fishing Log | `FishingNote` | `/read` |
 
 All four use `AddonEvent.PostShow`, confirmed via diagnostic logging
 to be what fires when the player actually opens the window (as
 opposed to `PostSetup`/`PostOpen`, which only fire once per session
 when the addon is first constructed).
 
-The map's 13-second lock exists because `ConditionFlag.Emoting` does
-NOT reflect `/navigate` or `/study` — confirmed False while `/navigate`
-was visibly still playing — so there's no reliable game-exposed "still
-playing" flag to check. The lock is a hand-tuned approximation
-instead. The three log windows have no lock, which is what lets
-`/study` always interrupt an in-progress `/navigate`; since the map's
-lock only guards against itself, `/navigate` can likewise always
-interrupt `/study`.
+### How the interrupt/repeat logic works
+
+`ConditionFlag.Emoting` does NOT reflect `/navigate` or `/read`
+(confirmed False while `/navigate` was visibly still playing), so
+there's no Dalamud-level flag to check. Instead, `Plugin.cs` reads the
+local player's `Character.Mode` directly via FFXIVClientStructs —
+`EmoteLoop`, `AnimLock`, and `InPositionLoop` are the values tied to
+playing some kind of emote/animation; anything else means the
+character is free to act.
+
+The game can't tell us *which* specific emote is playing, only that
+*something* is — so the plugin also remembers which of its own two
+emotes it last sent. A trigger only refuses to fire if the character
+is busy **and** that busy state was caused by the same emote it's
+about to send again; a different emote (or a busy state caused by
+something else entirely) still fires normally. That's what lets
+`/navigate` and `/read` freely interrupt each other while neither
+restarts itself mid-animation.
 
 ### Making a release build
 

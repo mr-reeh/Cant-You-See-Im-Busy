@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "tC31SdhqC2M=",
+  "dgSpecHash": "ymxtMrDXGhs=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Hayden\\Desktop\\My Plugins\\CantYouSeeImBusy\\CantYouSeeImBusy\\CantYouSeeImBusy.csproj",
+  "projectFilePath": "C:\\Users\\Hayden\\Desktop\\My Plugins\\Cant You See Im Busy\\CantYouSeeImBusy\\CantYouSeeImBusy.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Hayden\\.nuget\\packages\\dalamudpackager\\15.0.0\\dalamudpackager.15.0.0.nupkg.sha512",
     "C:\\Users\\Hayden\\.nuget\\packages\\dotnet.reproduciblebuilds\\1.2.39\\dotnet.reproduciblebuilds.1.2.39.nupkg.sha512",

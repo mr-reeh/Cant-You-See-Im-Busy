@@ -39,21 +39,21 @@ public class ConfigWindow : Window
         }
 
         var crafting = config.CraftingLogEnabled;
-        if (ImGui.Checkbox("Crafting Log (/study)", ref crafting))
+        if (ImGui.Checkbox("Crafting Log (/read)", ref crafting))
         {
             config.CraftingLogEnabled = crafting;
             changed = true;
         }
 
         var gathering = config.GatheringLogEnabled;
-        if (ImGui.Checkbox("Gathering Log (/study)", ref gathering))
+        if (ImGui.Checkbox("Gathering Log (/read)", ref gathering))
         {
             config.GatheringLogEnabled = gathering;
             changed = true;
         }
 
         var fishing = config.FishingLogEnabled;
-        if (ImGui.Checkbox("Fishing Log (/study)", ref fishing))
+        if (ImGui.Checkbox("Fishing Log (/read)", ref fishing))
         {
             config.FishingLogEnabled = fishing;
             changed = true;
@@ -68,14 +68,18 @@ public class ConfigWindow : Window
             changed = true;
         }
 
-        ImGui.TextDisabled("Map re-opens are locked out for 13s to avoid self-interrupting.");
+        ImGui.TextDisabled(
+            "Neither emote restarts itself while it's still playing, but " +
+            "/navigate and /read can always interrupt each other.");
 
         ImGui.Separator();
         ImGui.TextWrapped(
-            "All four windows' addon hooks are confirmed working. Enable " +
-            "diagnostic logging below if something stops firing after a " +
-            "game patch changes an addon name, and check /xllog for " +
-            "'[CYSIB diag]' lines to find the new one.");
+            "All four windows' addon hooks are confirmed working. Diagnostic " +
+            "logging also prints the character's busy state on every trigger " +
+            "(useful if the interrupt behavior above ever misbehaves), and " +
+            "logs any addon name that looks map/crafting/gathering/fishing- " +
+            "related if a future game patch breaks one of the hooks — check " +
+            "/xllog for '[CYSIB diag]' lines.");
 
         var diag = config.DiagnosticLogging;
         if (ImGui.Checkbox("Diagnostic addon logging", ref diag))

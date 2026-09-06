@@ -12,9 +12,9 @@ using System.Reflection;
 
 [assembly: System.Reflection.AssemblyCompanyAttribute("CantYouSeeImBusy")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
-[assembly: System.Reflection.AssemblyDescriptionAttribute(("Automatically triggers /navigate when you open the world or zone map, and /study " +
-    "when you open the Crafting, Gathering, or Fishing Log. /navigate and /study can " +
-    "interrupt each other; the map won\'t re-trigger itself for 13 seconds."))]
+[assembly: System.Reflection.AssemblyDescriptionAttribute(("Automatically triggers /navigate when you open the world or zone map, and /read w" +
+    "hen you open the Crafting, Gathering, or Fishing Log. /navigate and /read can in" +
+    "terrupt each other, but neither restarts its own animation on a quick reopen."))]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("0.1.0.0")]
 [assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.1.0.0")]
 [assembly: System.Reflection.AssemblyProductAttribute("CantYouSeeImBusy")]

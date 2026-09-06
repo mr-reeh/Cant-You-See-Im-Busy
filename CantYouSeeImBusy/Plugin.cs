@@ -10,6 +10,7 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using ECommons;
 using ECommons.Automation;
+using FFXIVClientStructs.FFXIV.Client.Game.Character;
 
 namespace CantYouSeeImBusy;
 
@@ -22,6 +23,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
     [PluginService] internal static IAddonLifecycle AddonLifecycle { get; private set; } = null!;
     [PluginService] internal static IClientState ClientState { get; private set; } = null!;
+    [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
     [PluginService] internal static ICondition Condition { get; private set; } = null!;
     [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
     [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
@@ -32,34 +34,24 @@ public sealed class Plugin : IDalamudPlugin
     private readonly WindowSystem windowSystem = new("CantYouSeeImBusy");
     private readonly ConfigWindow configWindow;
 
-    // Only the map self-locks against rapid re-triggering (hardcoded,
-    // permanent — see MapLockSeconds below). /study on the three logs has
-    // no lock at all, so opening a log always fires /study immediately,
-    // interrupting an in-progress /navigate — and since /navigate's lock
-    // is scoped to itself only, opening the map after a log's /study still
-    // fires and interrupts it too. LockSeconds is null for triggers that
-    // should never self-lock.
-    //
-    // RecipeNote, GatheringNote, and FishingNote are all confirmed
-    // working live (GatheringNote and RecipeNote confirmed by testing;
-    // FishingNote confirmed via diagnostic logging after FishGuide,
-    // the original guess, turned out wrong).
-    private const double MapLockSeconds = 13.0;
-
-    private readonly Dictionary<string, (Func<Configuration, bool> Enabled, string Emote, double? LockSeconds)> trackedAddons = new()
+    // RecipeNote, GatheringNote, and FishingNote are all confirmed working
+    // live (GatheringNote and RecipeNote confirmed by testing; FishingNote
+    // confirmed via diagnostic logging after FishGuide, the original
+    // guess, turned out wrong).
+    private readonly Dictionary<string, (Func<Configuration, bool> Enabled, string Emote)> trackedAddons = new()
     {
-        ["AreaMap"] = (c => c.MapEnabled, "/navigate", MapLockSeconds),
-        ["RecipeNote"] = (c => c.CraftingLogEnabled, "/study", null),
-        ["GatheringNote"] = (c => c.GatheringLogEnabled, "/study", null),
-        ["FishingNote"] = (c => c.FishingLogEnabled, "/study", null),
+        ["AreaMap"] = (c => c.MapEnabled, "/navigate"),
+        ["RecipeNote"] = (c => c.CraftingLogEnabled, "/read"),
+        ["GatheringNote"] = (c => c.GatheringLogEnabled, "/read"),
+        ["FishingNote"] = (c => c.FishingLogEnabled, "/read"),
     };
 
-    // Only populated for triggers that have a LockSeconds value (currently
-    // just AreaMap). ConditionFlag.Emoting does NOT reflect these prop
-    // emotes (confirmed False while /navigate was visibly still playing),
-    // so this is our own approximation of "still busy" instead of trusting
-    // a game-exposed flag that doesn't apply here.
-    private readonly Dictionary<string, DateTime> lockUntil = new();
+    // Which of our own emotes (if any) is the reason the character is
+    // currently in a "busy" Mode. Used only to tell "still playing the
+    // same thing we just triggered" apart from "playing something else" —
+    // the latter should still fire and interrupt. Cleared whenever the
+    // character isn't in a busy Mode, so stale values can't linger.
+    private string? currentlyPlayingEmote;
 
     public Plugin(IDalamudPluginInterface pluginInterface)
     {
@@ -110,6 +102,26 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
+    // Reads the local player's CharacterModes directly via FFXIVClientStructs.
+    // ConditionFlag.Emoting does NOT reflect /navigate or /read (confirmed
+    // False while /navigate was visibly still playing) — Character.Mode is
+    // the field the game itself actually uses. EmoteLoop/AnimLock/
+    // InPositionLoop are the three Mode values tied to playing some kind of
+    // emote/animation; Normal (and everything else) means free to act.
+    private static unsafe bool IsCharacterBusyWithEmote()
+    {
+        var localPlayer = ObjectTable.LocalPlayer;
+        if (localPlayer == null)
+            return false;
+
+        var character = (Character*)localPlayer.Address;
+        if (character == null)
+            return false;
+
+        var mode = character->Mode;
+        return mode is CharacterModes.EmoteLoop or CharacterModes.AnimLock or CharacterModes.InPositionLoop;
+    }
+
     private void OnTrackedAddonShow(AddonEvent type, AddonArgs args)
     {
         if (!Configuration.MasterEnabled)
@@ -131,19 +143,24 @@ public sealed class Plugin : IDalamudPlugin
             || Condition[ConditionFlag.Casting])
             return;
 
-        // Only fires for triggers with a LockSeconds value (the map).
-        // /study on the logs has none, so it always fires — which is what
-        // lets it interrupt an in-progress /navigate.
-        if (trigger.LockSeconds is { } lockSeconds)
-        {
-            if (lockUntil.TryGetValue(args.AddonName, out var until) && DateTime.Now < until)
-                return;
+        var busy = IsCharacterBusyWithEmote();
 
-            lockUntil[args.AddonName] = DateTime.Now.AddSeconds(lockSeconds);
-        }
+        if (Configuration.DiagnosticLogging)
+            Log.Information($"[CYSIB diag] {args.AddonName} PostShow: busy={busy}, currentlyPlaying={currentlyPlayingEmote ?? "none"}");
+
+        if (!busy)
+            currentlyPlayingEmote = null;
+
+        // Only refuse to fire if the SAME emote is still the reason we're
+        // busy — this is what stops /navigate (or /read) from restarting
+        // itself on a quick reopen, while still letting /navigate and
+        // /read interrupt each other freely.
+        if (busy && currentlyPlayingEmote == trigger.Emote)
+            return;
 
         var command = Configuration.MotionOnly ? $"{trigger.Emote} motion" : trigger.Emote;
         Chat.SendMessage(command);
+        currentlyPlayingEmote = trigger.Emote;
     }
 
     private void DrawUi() => windowSystem.Draw();

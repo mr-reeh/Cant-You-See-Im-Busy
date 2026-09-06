@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Hayden\\Desktop\\My Plugins\\CantYouSeeImBusy\\CantYouSeeImBusy\\CantYouSeeImBusy.csproj": {}
+    "C:\\Users\\Hayden\\Desktop\\My Plugins\\Cant You See Im Busy\\CantYouSeeImBusy\\CantYouSeeImBusy.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Hayden\\Desktop\\My Plugins\\CantYouSeeImBusy\\CantYouSeeImBusy\\CantYouSeeImBusy.csproj": {
+    "C:\\Users\\Hayden\\Desktop\\My Plugins\\Cant You See Im Busy\\CantYouSeeImBusy\\CantYouSeeImBusy.csproj": {
       "version": "0.1.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Hayden\\Desktop\\My Plugins\\CantYouSeeImBusy\\CantYouSeeImBusy\\CantYouSeeImBusy.csproj",
+        "projectUniqueName": "C:\\Users\\Hayden\\Desktop\\My Plugins\\Cant You See Im Busy\\CantYouSeeImBusy\\CantYouSeeImBusy.csproj",
         "projectName": "CantYouSeeImBusy",
-        "projectPath": "C:\\Users\\Hayden\\Desktop\\My Plugins\\CantYouSeeImBusy\\CantYouSeeImBusy\\CantYouSeeImBusy.csproj",
+        "projectPath": "C:\\Users\\Hayden\\Desktop\\My Plugins\\Cant You See Im Busy\\CantYouSeeImBusy\\CantYouSeeImBusy.csproj",
         "packagesPath": "C:\\Users\\Hayden\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Hayden\\Desktop\\My Plugins\\CantYouSeeImBusy\\CantYouSeeImBusy\\obj\\",
+        "outputPath": "C:\\Users\\Hayden\\Desktop\\My Plugins\\Cant You See Im Busy\\CantYouSeeImBusy\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Hayden\\AppData\\Roaming\\NuGet\\NuGet.Config",
