@@ -24,6 +24,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IAddonLifecycle AddonLifecycle { get; private set; } = null!;
     [PluginService] internal static IClientState ClientState { get; private set; } = null!;
     [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
+    [PluginService] internal static IFramework Framework { get; private set; } = null!;
     [PluginService] internal static ICondition Condition { get; private set; } = null!;
     [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
     [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
@@ -53,8 +54,22 @@ public sealed class Plugin : IDalamudPlugin
     // character isn't in a busy Mode, so stale values can't linger.
     private string? currentlyPlayingEmote;
 
+    // --- TEMPORARY DIAGNOSTICS ---
+    // Character.Mode (EmoteLoop/AnimLock/InPositionLoop) turned out NOT to
+    // reflect non-looping "prop" emotes like /navigate or /read (confirmed
+    // by live testing — busy stayed False the whole time). Rather than
+    // guess at another unverified internal field, this samples Mode and
+    // ModeParam repeatedly for a few seconds after we trigger one of our
+    // emotes, so real data from an actual playback tells us what (if
+    // anything) changes, instead of another blind guess.
+    private DateTime watchUntil = DateTime.MinValue;
+    private DateTime lastWatchLog = DateTime.MinValue;
+    // --- END TEMPORARY DIAGNOSTICS ---
+
     public Plugin(IDalamudPluginInterface pluginInterface)
     {
+        PluginInstance = this;
+
         // ECommons gives us Chat.SendMessage, a maintained, version-tolerant
         // way to inject text into chat, instead of hand-rolling a
         // ProcessChatBox signature scan ourselves.
@@ -75,6 +90,10 @@ public sealed class Plugin : IDalamudPlugin
         foreach (var addonName in trackedAddons.Keys)
             AddonLifecycle.RegisterListener(AddonEvent.PostShow, addonName, OnTrackedAddonShow);
 
+        // --- TEMPORARY DIAGNOSTICS ---
+        Framework.Update += OnFrameworkUpdateDiagnostic;
+        // --- END TEMPORARY DIAGNOSTICS ---
+
         // Diagnostic net: logs any Open/Show/Setup/Refresh for addons whose
         // name looks map/crafting/gathering/fishing-related, gated by the
         // DiagnosticLogging config toggle rather than always-on spam.
@@ -85,6 +104,33 @@ public sealed class Plugin : IDalamudPlugin
 
         Log.Information("Can't You See I'm Busy loaded.");
     }
+
+    // --- TEMPORARY DIAGNOSTICS ---
+    // Samples Character.Mode/ModeParam roughly every 200ms for 8 seconds
+    // after a tracked emote fires, so we can see in /xllog exactly how (or
+    // whether) they change across the real animation, rather than guess.
+    private static unsafe void OnFrameworkUpdateDiagnostic(IFramework framework)
+    {
+        if (DateTime.Now > PluginInstance!.watchUntil)
+            return;
+
+        if (DateTime.Now - PluginInstance.lastWatchLog < TimeSpan.FromMilliseconds(200))
+            return;
+        PluginInstance.lastWatchLog = DateTime.Now;
+
+        var localPlayer = ObjectTable.LocalPlayer;
+        if (localPlayer == null)
+            return;
+
+        var character = (Character*)localPlayer.Address;
+        if (character == null)
+            return;
+
+        Log.Information($"[CYSIB diag] t={DateTime.Now:HH:mm:ss.fff} Mode={character->Mode} ModeParam={character->ModeParam} ActorControlFlags={character->ActorControlFlags}");
+    }
+
+    private static Plugin? PluginInstance;
+    // --- END TEMPORARY DIAGNOSTICS ---
 
     private void OnAnyAddonDiagnostic(AddonEvent type, AddonArgs args)
     {
@@ -161,6 +207,14 @@ public sealed class Plugin : IDalamudPlugin
         var command = Configuration.MotionOnly ? $"{trigger.Emote} motion" : trigger.Emote;
         Chat.SendMessage(command);
         currentlyPlayingEmote = trigger.Emote;
+
+        // --- TEMPORARY DIAGNOSTICS ---
+        if (Configuration.DiagnosticLogging)
+        {
+            watchUntil = DateTime.Now.AddSeconds(8);
+            Log.Information($"[CYSIB diag] sent '{command}', watching Mode for 8s...");
+        }
+        // --- END TEMPORARY DIAGNOSTICS ---
     }
 
     private void DrawUi() => windowSystem.Draw();
@@ -178,6 +232,10 @@ public sealed class Plugin : IDalamudPlugin
             AddonLifecycle.UnregisterListener(AddonEvent.PostShow, addonName, OnTrackedAddonShow);
 
         AddonLifecycle.UnregisterListener(OnAnyAddonDiagnostic);
+
+        // --- TEMPORARY DIAGNOSTICS ---
+        Framework.Update -= OnFrameworkUpdateDiagnostic;
+        // --- END TEMPORARY DIAGNOSTICS ---
 
         PluginInterface.UiBuilder.Draw -= DrawUi;
         PluginInterface.UiBuilder.OpenConfigUi -= ToggleConfigWindow;
