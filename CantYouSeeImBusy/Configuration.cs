@@ -15,9 +15,9 @@ public class Configuration : IPluginConfiguration
     public bool GatheringLogEnabled { get; set; } = true;
     public bool FishingLogEnabled { get; set; } = true;
 
-    // Note: the map's 13-second re-trigger lock is hardcoded in Plugin.cs
-    // (MapLockSeconds), not stored here — it's meant to stay fixed rather
-    // than be user-tunable.
+    // /read is an infinite loop, so Character.Mode == EmoteLoop detects
+    // it directly and accurately — no timer needed. /navigate has no
+    // equivalent setting: it just fires fresh every time the map opens.
 
     // Appends " motion" to whichever emote is sent, so it plays the
     // animation only, without echoing a line into chat.

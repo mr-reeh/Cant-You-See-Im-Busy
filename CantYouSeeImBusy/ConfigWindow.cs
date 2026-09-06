@@ -69,8 +69,9 @@ public class ConfigWindow : Window
         }
 
         ImGui.TextDisabled(
-            "Neither emote restarts itself while it's still playing, but " +
-            "/navigate and /read can always interrupt each other.");
+            "/navigate always plays fresh on every map open. /read won't " +
+            "restart itself while its loop is still going, but /navigate " +
+            "can always interrupt it.");
 
         ImGui.Separator();
         ImGui.TextWrapped(

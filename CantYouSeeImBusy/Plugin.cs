@@ -24,7 +24,6 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IAddonLifecycle AddonLifecycle { get; private set; } = null!;
     [PluginService] internal static IClientState ClientState { get; private set; } = null!;
     [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
-    [PluginService] internal static IFramework Framework { get; private set; } = null!;
     [PluginService] internal static ICondition Condition { get; private set; } = null!;
     [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
     [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
@@ -47,29 +46,8 @@ public sealed class Plugin : IDalamudPlugin
         ["FishingNote"] = (c => c.FishingLogEnabled, "/read"),
     };
 
-    // Which of our own emotes (if any) is the reason the character is
-    // currently in a "busy" Mode. Used only to tell "still playing the
-    // same thing we just triggered" apart from "playing something else" —
-    // the latter should still fire and interrupt. Cleared whenever the
-    // character isn't in a busy Mode, so stale values can't linger.
-    private string? currentlyPlayingEmote;
-
-    // --- TEMPORARY DIAGNOSTICS ---
-    // Character.Mode (EmoteLoop/AnimLock/InPositionLoop) turned out NOT to
-    // reflect non-looping "prop" emotes like /navigate or /read (confirmed
-    // by live testing — busy stayed False the whole time). Rather than
-    // guess at another unverified internal field, this samples Mode and
-    // ModeParam repeatedly for a few seconds after we trigger one of our
-    // emotes, so real data from an actual playback tells us what (if
-    // anything) changes, instead of another blind guess.
-    private DateTime watchUntil = DateTime.MinValue;
-    private DateTime lastWatchLog = DateTime.MinValue;
-    // --- END TEMPORARY DIAGNOSTICS ---
-
     public Plugin(IDalamudPluginInterface pluginInterface)
     {
-        PluginInstance = this;
-
         // ECommons gives us Chat.SendMessage, a maintained, version-tolerant
         // way to inject text into chat, instead of hand-rolling a
         // ProcessChatBox signature scan ourselves.
@@ -90,10 +68,6 @@ public sealed class Plugin : IDalamudPlugin
         foreach (var addonName in trackedAddons.Keys)
             AddonLifecycle.RegisterListener(AddonEvent.PostShow, addonName, OnTrackedAddonShow);
 
-        // --- TEMPORARY DIAGNOSTICS ---
-        Framework.Update += OnFrameworkUpdateDiagnostic;
-        // --- END TEMPORARY DIAGNOSTICS ---
-
         // Diagnostic net: logs any Open/Show/Setup/Refresh for addons whose
         // name looks map/crafting/gathering/fishing-related, gated by the
         // DiagnosticLogging config toggle rather than always-on spam.
@@ -104,33 +78,6 @@ public sealed class Plugin : IDalamudPlugin
 
         Log.Information("Can't You See I'm Busy loaded.");
     }
-
-    // --- TEMPORARY DIAGNOSTICS ---
-    // Samples Character.Mode/ModeParam roughly every 200ms for 8 seconds
-    // after a tracked emote fires, so we can see in /xllog exactly how (or
-    // whether) they change across the real animation, rather than guess.
-    private static unsafe void OnFrameworkUpdateDiagnostic(IFramework framework)
-    {
-        if (DateTime.Now > PluginInstance!.watchUntil)
-            return;
-
-        if (DateTime.Now - PluginInstance.lastWatchLog < TimeSpan.FromMilliseconds(200))
-            return;
-        PluginInstance.lastWatchLog = DateTime.Now;
-
-        var localPlayer = ObjectTable.LocalPlayer;
-        if (localPlayer == null)
-            return;
-
-        var character = (Character*)localPlayer.Address;
-        if (character == null)
-            return;
-
-        Log.Information($"[CYSIB diag] t={DateTime.Now:HH:mm:ss.fff} Mode={character->Mode} ModeParam={character->ModeParam} ActorControlFlags={character->ActorControlFlags}");
-    }
-
-    private static Plugin? PluginInstance;
-    // --- END TEMPORARY DIAGNOSTICS ---
 
     private void OnAnyAddonDiagnostic(AddonEvent type, AddonArgs args)
     {
@@ -148,13 +95,10 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    // Reads the local player's CharacterModes directly via FFXIVClientStructs.
-    // ConditionFlag.Emoting does NOT reflect /navigate or /read (confirmed
-    // False while /navigate was visibly still playing) — Character.Mode is
-    // the field the game itself actually uses. EmoteLoop/AnimLock/
-    // InPositionLoop are the three Mode values tied to playing some kind of
-    // emote/animation; Normal (and everything else) means free to act.
-    private static unsafe bool IsCharacterBusyWithEmote()
+    // /read is an infinite loop, so Character.Mode == EmoteLoop is exactly
+    // the signal meant to detect it (confirmed False for /navigate, which
+    // is why /navigate doesn't use this check at all — see below).
+    private static unsafe bool IsCharacterInEmoteLoop()
     {
         var localPlayer = ObjectTable.LocalPlayer;
         if (localPlayer == null)
@@ -164,16 +108,36 @@ public sealed class Plugin : IDalamudPlugin
         if (character == null)
             return false;
 
-        var mode = character->Mode;
-        return mode is CharacterModes.EmoteLoop or CharacterModes.AnimLock or CharacterModes.InPositionLoop;
+        return character->Mode is CharacterModes.EmoteLoop or CharacterModes.InPositionLoop;
     }
 
     private void OnTrackedAddonShow(AddonEvent type, AddonArgs args)
     {
-        if (!Configuration.MasterEnabled)
+        if (!trackedAddons.TryGetValue(args.AddonName, out var trigger))
             return;
 
-        if (!trackedAddons.TryGetValue(args.AddonName, out var trigger))
+        var isNavigate = trigger.Emote == "/navigate";
+        // /navigate always fires fresh on every map open — no self-lock.
+        // /read is the one that needs a check, since it loops forever
+        // until something interrupts it.
+        var selfBusy = !isNavigate && IsCharacterInEmoteLoop();
+
+        // Log every guard's state up front, before any early return, so a
+        // silent bail-out (combat, cutscene, master toggle, etc.) is
+        // visible in /xllog instead of just looking like nothing happened.
+        if (Configuration.DiagnosticLogging)
+        {
+            Log.Information($"[CYSIB diag] {args.AddonName} PostShow: "
+                + $"masterEnabled={Configuration.MasterEnabled}, "
+                + $"windowEnabled={trigger.Enabled(Configuration)}, "
+                + $"loggedIn={ClientState.IsLoggedIn}, "
+                + $"inCutscene={Condition[ConditionFlag.OccupiedInCutSceneEvent]}, "
+                + $"inCombat={Condition[ConditionFlag.InCombat]}, "
+                + $"casting={Condition[ConditionFlag.Casting]}, "
+                + $"selfBusy={selfBusy}");
+        }
+
+        if (!Configuration.MasterEnabled)
             return;
 
         if (!trigger.Enabled(Configuration))
@@ -189,32 +153,17 @@ public sealed class Plugin : IDalamudPlugin
             || Condition[ConditionFlag.Casting])
             return;
 
-        var busy = IsCharacterBusyWithEmote();
-
-        if (Configuration.DiagnosticLogging)
-            Log.Information($"[CYSIB diag] {args.AddonName} PostShow: busy={busy}, currentlyPlaying={currentlyPlayingEmote ?? "none"}");
-
-        if (!busy)
-            currentlyPlayingEmote = null;
-
-        // Only refuse to fire if the SAME emote is still the reason we're
-        // busy — this is what stops /navigate (or /read) from restarting
-        // itself on a quick reopen, while still letting /navigate and
-        // /read interrupt each other freely.
-        if (busy && currentlyPlayingEmote == trigger.Emote)
+        // Only refuse to fire if this SAME emote is the reason we'd be
+        // repeating ourselves. /navigate has no such check at all — it
+        // always fires fresh. /read's check never looks at /navigate's
+        // state either, so opening the map always fires /navigate
+        // (interrupting an in-progress /read) and opening a log always
+        // fires /read (interrupting an in-progress /navigate).
+        if (selfBusy)
             return;
 
         var command = Configuration.MotionOnly ? $"{trigger.Emote} motion" : trigger.Emote;
         Chat.SendMessage(command);
-        currentlyPlayingEmote = trigger.Emote;
-
-        // --- TEMPORARY DIAGNOSTICS ---
-        if (Configuration.DiagnosticLogging)
-        {
-            watchUntil = DateTime.Now.AddSeconds(8);
-            Log.Information($"[CYSIB diag] sent '{command}', watching Mode for 8s...");
-        }
-        // --- END TEMPORARY DIAGNOSTICS ---
     }
 
     private void DrawUi() => windowSystem.Draw();
@@ -232,10 +181,6 @@ public sealed class Plugin : IDalamudPlugin
             AddonLifecycle.UnregisterListener(AddonEvent.PostShow, addonName, OnTrackedAddonShow);
 
         AddonLifecycle.UnregisterListener(OnAnyAddonDiagnostic);
-
-        // --- TEMPORARY DIAGNOSTICS ---
-        Framework.Update -= OnFrameworkUpdateDiagnostic;
-        // --- END TEMPORARY DIAGNOSTICS ---
 
         PluginInterface.UiBuilder.Draw -= DrawUi;
         PluginInterface.UiBuilder.OpenConfigUi -= ToggleConfigWindow;

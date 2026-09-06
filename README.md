@@ -6,13 +6,12 @@ apparently you're far too busy to just stand there.
 
 ## What it does
 
-- Opening the world map or zone map plays **/navigate**.
+- Opening the world map or zone map plays **/navigate**, fresh every
+  time — no cooldown, so it always restarts even if the previous one
+  is still playing.
 - Opening the Crafting Log, Gathering Log, or Fishing Log plays
-  **/read**.
-- The two never step on each other weirdly: opening a log will always
-  interrupt an in-progress `/navigate`, and vice versa — but neither
-  one restarts its own animation from scratch if you quickly close and
-  reopen the same window while it's still playing.
+  **/read**, which won't restart itself while its loop is still
+  going — but either one can still interrupt the other at any time.
 - Everything is toggleable individually, plus a master on/off switch.
 
 ## Installing
@@ -48,8 +47,8 @@ If one of the four stops triggering (most likely after a game patch
 changes an internal window name), or the interrupt/repeat behavior
 seems off, turn on **Diagnostic addon logging** in the settings
 window and check `/xllog` for lines starting with `[CYSIB diag]` —
-they show both the window's current internal name and the
-character's busy state at the moment it tried to trigger.
+they show the window's current internal name and whether the plugin
+considers itself "self-busy" at the moment it tried to trigger.
 
 ---
 
@@ -98,22 +97,21 @@ when the addon is first constructed).
 
 ### How the interrupt/repeat logic works
 
-`ConditionFlag.Emoting` does NOT reflect `/navigate` or `/read`
-(confirmed False while `/navigate` was visibly still playing), so
-there's no Dalamud-level flag to check. Instead, `Plugin.cs` reads the
-local player's `Character.Mode` directly via FFXIVClientStructs —
-`EmoteLoop`, `AnimLock`, and `InPositionLoop` are the values tied to
-playing some kind of emote/animation; anything else means the
-character is free to act.
+`/read` is an infinite loop, so `Character.Mode == EmoteLoop` (read
+via FFXIVClientStructs) is exactly the signal meant to detect it, and
+does so accurately — the plugin won't restart `/read` while its loop
+is still going. `/navigate` deliberately has no such check: it's a
+long one-shot animation (confirmed >8 seconds via live diagnostic
+sampling) that `Character.Mode` never reflects at all, so there's no
+reliable "still playing" flag to check anyway — rather than fake one
+with a timer, `/navigate` just fires fresh on every map open.
 
-The game can't tell us *which* specific emote is playing, only that
-*something* is — so the plugin also remembers which of its own two
-emotes it last sent. A trigger only refuses to fire if the character
-is busy **and** that busy state was caused by the same emote it's
-about to send again; a different emote (or a busy state caused by
-something else entirely) still fires normally. That's what lets
-`/navigate` and `/read` freely interrupt each other while neither
-restarts itself mid-animation.
+Each trigger only checks its *own* state: `/navigate` never looks at
+`/read`'s loop state, and `/read`'s check never looks at `/navigate`
+either. That's what lets opening a log always fire `/read`
+(interrupting an in-progress `/navigate`) and opening the map always
+fire `/navigate` (interrupting an in-progress `/read`, and itself if
+it's still going).
 
 ### Making a release build
 
